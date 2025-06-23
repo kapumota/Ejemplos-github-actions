@@ -1,0 +1,21 @@
+name: CI
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1) Traemos el código
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2) Damos permisos de ejecución al script
+      - name: Hacer index.sh ejecutable
+        run: chmod +x index.sh
+
+      # 3) Ejecutamos nuestro script
+      - name: Ejecutar index.sh
+        run: bash index.sh
+
