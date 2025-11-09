@@ -1,0 +1,6 @@
+pytest==8.3.2
+coverage==7.6.1
+bandit==1.7.9
+semgrep==1.97.0
+pip-audit==2.7.3
+# Image and IaC scanners will be provided by container CLIs (syft, grype, trivy, zap)
