@@ -1,0 +1,3 @@
+# Bandit config básico
+skips: []
+exclude_dirs: ["tests"]
