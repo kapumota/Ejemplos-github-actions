@@ -1,4 +1,4 @@
-# Multi-stage: build wheel, then runtime
+# Multi-stage
 FROM python:3.12-slim AS build
 WORKDIR /app
 COPY pyproject.toml README.md ./
