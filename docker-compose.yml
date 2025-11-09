@@ -1,0 +1,13 @@
+# docker-compose.yml mínimo para pruebas locales (ajusta servicios/puertos)
+services:
+  app:
+    build: .
+    image: ${REGISTRY}/${APP_NAME}:dev
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 20s
