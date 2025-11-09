@@ -1,0 +1,6 @@
+# Requisitos mínimos para los ejemplos (ajusta a tu proyecto)
+pytest
+coverage
+ruff
+bandit
+pip-audit
