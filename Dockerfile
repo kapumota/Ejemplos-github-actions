@@ -9,8 +9,10 @@ FROM python:3.12-slim
 WORKDIR /app
 # Usuario no-root
 RUN useradd -m appuser
-COPY --from=build /app/dist/*.whl /tmp/pkg.whl
-RUN pip install --no-cache-dir /tmp/pkg.whl && rm -f /tmp/pkg.whl
+# Copiar el/los wheels sin renombrar
+COPY --from=build /app/dist/*.whl /tmp/wheels/
+# Instalar usando el nombre original del wheel
+RUN pip install --no-cache-dir /tmp/wheels/*.whl && rm -rf /tmp/wheels
 COPY src ./src
 ENV PYTHONPATH=/app/src
 USER appuser
