@@ -1,0 +1,113 @@
+name: CI (Lint, Test, Build + E2E)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch: {}
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    permissions: {}   # sin GITHUB_TOKEN
+    env:
+      PY_VERSION: ${{ vars.PY_VERSION || '3.12' }}
+      IMAGE_LOCAL: ci-lab:${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PY_VERSION }}
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}-${{ hashFiles('**/requirements*.txt') }}
+
+      - name: Install deps
+        run: |
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install pytest coverage ruff bandit
+
+      - name: Lint (ruff + bandit)
+        run: |
+          ruff check .
+          bandit -r . -x tests || true
+
+      - name: Test (coverage gate 85%)
+        run: |
+          coverage run -m pytest
+          mkdir -p .evidence
+          coverage xml -o .evidence/coverage.xml
+          coverage report --fail-under=85
+
+      - name: Build container (local tag)
+        run: docker build -t "${IMAGE_LOCAL}" .
+
+      - name: Save image as artifact
+        run: docker save "${IMAGE_LOCAL}" | gzip > image.tar.gz
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: |
+            image.tar.gz
+            .evidence/coverage.xml
+
+  e2e:
+    runs-on: ubuntu-latest
+    needs: ci
+    permissions: {}   # sin GITHUB_TOKEN
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+          path: .
+
+      - name: Install KinD & kubectl
+        uses: helm/kind-action@v1
+        with:
+          version: v0.20.0   # estable
+          cluster_name: ci-lab
+          wait: 60s
+
+      - name: Load image into KinD
+        run: kind load image-archive image.tar.gz --name ci-lab
+
+      - name: Apply k8s manifests
+        run: |
+          kubectl apply -f k8s/deployment.yaml
+          kubectl rollout status deploy/ci-lab --timeout=90s
+
+      - name: Port-forward (svc → localhost:8080)
+        run: |
+          nohup kubectl port-forward svc/ci-lab 8080:8080 >/tmp/pf.log 2>&1 &
+          sleep 3
+
+      - name: Smoke /healthz
+        run: curl -fsS http://localhost:8080/healthz
+
+      - name: DAST (ZAP baseline)
+        run: |
+          mkdir -p .evidence
+          docker run --rm --network host \
+            -v "${PWD}/.evidence:/zap/wrk:rw" \
+            owasp/zap2docker-stable zap-baseline.py \
+              -t http://localhost:8080 \
+              -r /zap/wrk/zap.html || true
+
+      - name: Upload E2E evidences
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-artifacts
+          path: |
+            .evidence/
+            /tmp/pf.log
