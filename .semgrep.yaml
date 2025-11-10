@@ -1,0 +1,14 @@
+rules:
+  - id: subprocess-shell-true
+    message: "Evita shell=True en subprocess por riesgo de inyección"
+    languages: [python]
+    severity: WARNING
+    patterns:
+      - pattern: subprocess.Popen(..., shell=True, ...)
+  - id: eval-use
+    message: "Evita eval/exec sobre entradas no confiables"
+    languages: [python]
+    severity: ERROR
+    pattern-either:
+      - pattern: eval(...)
+      - pattern: exec(...)
