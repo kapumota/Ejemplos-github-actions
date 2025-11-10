@@ -1,7 +1,9 @@
 # Minimalista: HTTP server con la librería estándar (no Flask).
 # Expone /healthz y lista de rutas básicas para DAST.
 from http.server import HTTPServer, BaseHTTPRequestHandler
-import json, os
+import json
+import os
+
 
 class Handler(BaseHTTPRequestHandler):
     def _send(self, code, payload, ctype="application/json"):
@@ -20,6 +22,7 @@ class Handler(BaseHTTPRequestHandler):
             self._send(200, "ci-lab: stdlib http.server demo")
         else:
             self._send(404, {"error": "not found", "path": self.path})
+
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", "8080"))
